@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lifting Tracker</title>
+  <meta name="theme-color" content="#1B365D" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    :root {
+      --bg-main: #0a0d14;
+      --bg-card: #121824;
+      --bg-card-sub: #1a2232;
+      --border-color: #263347;
+      --primary: #388bfd;
+      --accent-green: #2ea043;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg-main); color: var(--text-main); font-family: var(--font-family); line-height: 1.4; padding-bottom: 95px; }
+
+    header {
+      background: linear-gradient(135deg, #1B365D 0%, #0a0d14 100%);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .app-title { font-size: 16px; font-weight: 800; color: #fff; }
+    .btn-reset { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 11px; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+
+    .container { max-width: 520px; margin: 0 auto; padding: 12px; }
+
+    .day-selector { display: flex; gap: 8px; margin-bottom: 14px; }
+    .day-pill {
+      flex: 1; padding: 12px 4px; text-align: center; background: var(--bg-card);
+      border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px;
+      font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+    }
+    .day-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+    .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-main); }
+    .card-tag { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; background: var(--bg-card-sub); color: var(--text-muted); }
+
+    .exercise-item { background: var(--bg-card-sub); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; transition: all 0.2s; }
+    .exercise-item.done { border-color: var(--accent-green); opacity: 0.65; }
+
+    .ex-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .ex-name { font-size: 13.5px; font-weight: 600; color: #fff; flex: 1; }
+    .ex-reps { font-size: 12px; font-weight: 700; color: var(--primary); margin-left: 8px; white-space: nowrap; }
+
+    .ex-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .meta-tag { background: rgba(255, 255, 255, 0.05); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-color); }
+    .meta-tag strong { color: #e6edf3; }
+
+    .ex-cues { font-size: 11.5px; color: #c9d1d9; line-height: 1.4; margin-bottom: 8px; }
+
+    .ex-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+    .btn-video { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; color: var(--primary); text-decoration: none; background: rgba(56, 139, 253, 0.12); padding: 5px 10px; border-radius: 6px; }
+    .btn-timer-trigger { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+
+    .btn-check { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+    .btn-check.active { background: var(--accent-green); border-color: var(--accent-green); color: #fff; }
+
+    /* Docked Timer Bar */
+    .timer-dock {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #111620;
+      border-top: 1px solid var(--border-color); padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.6);
+    }
+    .timer-info { display: flex; flex-direction: column; }
+    .timer-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+    .timer-digits { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: #fff; line-height: 1.1; }
+
+    .timer-controls { display: flex; gap: 6px; align-items: center; }
+    .btn-preset { background: var(--bg-card-sub); border: 1px solid var(--border-color); color: var(--text-main); padding: 7px 9px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .btn-preset.active { border-color: var(--primary); color: var(--primary); }
+    .btn-main-action { background: var(--primary); border: none; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; min-width: 60px; }
+    .btn-main-action.running { background: #da3633; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="app-title">⚡ MAIN LIFTS (MON / TUE / THU)</div>
+    <button class="btn-reset" onclick="resetChecks()">Reset</button>
+  </header>
+
+  <div class="container">
+    <div class="day-selector">
+      <div class="day-pill active" id="tab-Mon" onclick="selectDay('Mon')">Monday</div>
+      <div class="day-pill" id="tab-Tue" onclick="selectDay('Tue')">Tuesday</div>
+      <div class="day-pill" id="tab-Thu" onclick="selectDay('Thu')">Thursday</div>
+    </div>
+    <div id="session-container"></div>
+  </div>
+
+  <div class="timer-dock">
+    <div class="timer-info">
+      <span class="timer-label">Rest Timer</span>
+      <span id="timer-display" class="timer-digits">00:45</span>
+    </div>
+    <div class="timer-controls">
+      <button class="btn-preset" onclick="setTimerSec(30)">30s</button>
+      <button class="btn-preset active" id="btn-p-45" onclick="setTimerSec(45)">45s</button>
+      <button class="btn-preset" onclick="setTimerSec(60)">60s</button>
+      <button id="btn-toggle-timer" class="btn-main-action" onclick="toggleTimer()">Start</button>
+    </div>
+  </div>
+
+  <script>
+    const schedule = {
+      Mon: {
+        title: "Full Body Strength & Posterior Armor",
+        duration: "35 min",
+        desc: "Supersets (A1/A2, B1/B2) followed by Nordics and Copenhagen holds.",
+        exercises: [
+          { name: "A1. DB Romanian Deadlift (RDL)", load: "12–16 kg / DB", reps: "3 x 5", rest: 45, cues: "Hips back, feel hamstring tension, stop below knee. No pump.", video: "https://www.youtube.com/watch?v=IJdUtnxAmNo" },
+          { name: "A2. DB Flat / Floor Press", load: "12–16 kg / DB", reps: "3 x 8-10", rest: 60, cues: "Elbows tucked 45°, explosive press, controlled descent.", video: "https://www.youtube.com/watch?v=n7CAWJoGuVE" },
+          { name: "B1. Single-Arm DB Row", load: "12–16 kg / DB", reps: "3 x 8-10 /arm", rest: 45, cues: "Chest supported / flat back, pull elbow to hip.", video: "https://www.youtube.com/watch?v=PgpQ4-jHiq4" },
+          { name: "B2. DB Reverse Lunges (Light)", load: "10–12 kg / DB", reps: "2 x 5 /leg", rest: 60, cues: "Low volume, snappy drive up. Avoid quad burn/pump.", video: "https://www.youtube.com/watch?v=2uAq0hnbJVk" },
+          { name: "Finisher 1: Nordic Hamstring Lowers", load: "Bodyweight", reps: "2-3 x 3-4 reps", rest: 60, cues: "Slow eccentric lowering (3s down); push back up.", video: "https://www.youtube.com/watch?v=IJdUtnxAmNo" },
+          { name: "Finisher 2: Copenhagen Plank", load: "Bodyweight", reps: "3 x 30s /side", rest: 30, cues: "Top leg on bench; pelvis locked. Adductor/groin protection.", video: "https://www.youtube.com/watch?v=5cTh21BfXzI" }
+        ]
+      },
+      Tue: {
+        title: "Upper Posture & Stability (Zero Legs)",
+        duration: "35 min",
+        desc: "Supersets (A1/A2, B1/B2). Legs completely rest.",
+        exercises: [
+          { name: "A1. Pull-ups or Heavy Band Rows", load: "BW / Band", reps: "3 x 6-8", rest: 60, cues: "Full dead hang to chin over bar. Retract scapula.", video: "https://www.youtube.com/watch?v=VuX7uI9XLNU" },
+          { name: "A2. Seated / Standing DB Press", load: "10–12 kg / DB", reps: "3 x 8", rest: 60, cues: "Neutral grip (palms in). Braced core, no arching.", video: "https://www.youtube.com/watch?v=sElIkjcfyNY" },
+          { name: "B1. 4 Variant Push-ups", load: "Bodyweight", reps: "3 x 12", rest: 45, cues: "2s lowering tempo, crisp lockout across variations.", video: "https://www.youtube.com/watch?v=FU_5LPjtjus" },
+          { name: "B2. DB Lateral + Rear Delt Flys", load: "4–6 kg / DB", reps: "3 x 12 ea", rest: 45, cues: "Superset; light dumbbells, strict control.", video: "https://www.youtube.com/shorts/9WpNWAM782Y" }
+        ]
+      },
+      Thu: {
+        title: "Pre-Match Power Primer & Tendon Stiffness",
+        duration: "30 min",
+        desc: "Submaximal power primer (RPE 6-7). Stay springy for Friday.",
+        exercises: [
+          { name: "A1. Paused Goblet Squat (1s pause)", load: "14–18 kg (Single DB)", reps: "3 x 4-5", rest: 60, cues: "Full depth pause, explode up. 2-3 reps in reserve.", video: "https://www.youtube.com/watch?v=BwgftZE4w0U" },
+          { name: "A2. Standing DB Push-Press", load: "10–12 kg / DB", reps: "3 x 6-8", rest: 60, cues: "Slight knee dip, explosive overhead lockout.", video: "https://www.youtube.com/watch?v=sElIkjcfyNY" },
+          { name: "B1. Single-Leg DB RDL", load: "10–12 kg (Single/Pair)", reps: "2 x 5 /leg", rest: 45, cues: "Hamstring tendon load & balance. Light weight.", video: "https://www.youtube.com/watch?v=_DhDkij1vxY" },
+          { name: "B2. DB Chest-Supported Rows", load: "12–16 kg / DB", reps: "3 x 8", rest: 45, cues: "Upper back strength and pitch posture.", video: "https://www.youtube.com/watch?v=h2Xafysr43E" },
+          { name: "Finisher: Jumping Rope (5 x 2 mins)", load: "Speed Rope", reps: "5 x 2 mins", rest: 30, cues: "Stiff ankles, reactive spring off ball of foot. Boxer skip.", video: "https://www.youtube.com/watch?v=fV73Ce3RiiQ" }
+        ]
+      }
+    };
+
+    let activeDay = 'Mon';
+
+    function selectDay(dayKey) {
+      activeDay = dayKey;
+      document.querySelectorAll('.day-pill').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + dayKey).classList.add('active');
+      renderSchedule();
+    }
+
+    function renderSchedule() {
+      const dayData = schedule[activeDay];
+      const container = document.getElementById('session-container');
+      let html = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${dayData.title}</div>
+            <span class="card-tag">${dayData.duration}</span>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">${dayData.desc}</p>
+      `;
+
+      dayData.exercises.forEach((ex, idx) => {
+        const eid = `m_${activeDay}_${idx}`;
+        const isDone = localStorage.getItem(eid) === 'true';
+        html += `
+          <div class="exercise-item ${isDone ? 'done' : ''}">
+            <div class="ex-top">
+              <span class="ex-name">${ex.name}</span>
+              <span class="ex-reps">${ex.reps}</span>
+            </div>
+            <div class="ex-meta">
+              <span class="meta-tag">Load: <strong>${ex.load}</strong></span>
+              <span class="meta-tag" onclick="triggerRest(${ex.rest})" style="cursor:pointer;">Rest: <strong>${ex.rest}s ⏱</strong></span>
+            </div>
+            <div class="ex-cues">${ex.cues}</div>
+            <div class="ex-actions">
+              ${ex.video ? `<a href="${ex.video}" target="_blank" class="btn-video">▶ Video</a>` : `<span></span>`}
+              <div style="display:flex; gap:6px;">
+                <button class="btn-timer-trigger" onclick="triggerRest(${ex.rest})">⏱ Rest ${ex.rest}s</button>
+                <button class="btn-check ${isDone ? 'active' : ''}" onclick="toggleCheck('${eid}')">
+                  ${isDone ? '✓ Done' : '○ Mark Done'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function toggleCheck(id) {
+      const state = localStorage.getItem(id) === 'true';
+      localStorage.setItem(id, (!state).toString());
+      renderSchedule();
+    }
+
+    function resetChecks() {
+      if (confirm('Reset all checkmarks?')) {
+        localStorage.clear();
+        renderSchedule();
+      }
+    }
+
+    let timerTotal = 45;
+    let timerLeft = 45;
+    let timerRef = null;
+
+    function setTimerSec(sec) {
+      clearInterval(timerRef);
+      timerRef = null;
+      timerTotal = sec;
+      timerLeft = sec;
+      updateDisplay();
+      document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`btn-p-${sec}`);
+      if (btn) btn.classList.add('active');
+      const toggle = document.getElementById('btn-toggle-timer');
+      toggle.innerText = 'Start';
+      toggle.classList.remove('running');
+    }
+
+    function triggerRest(sec) {
+      setTimerSec(sec);
+      toggleTimer();
+    }
+
+    function updateDisplay() {
+      const m = Math.floor(timerLeft / 60).toString().padStart(2, '0');
+      const s = (timerLeft % 60).toString().padStart(2, '0');
+      document.getElementById('timer-display').innerText = `${m}:${s}`;
+    }
+
+    function playBeep() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        }
+      } catch(e) {}
+    }
+
+    function toggleTimer() {
+      const btn = document.getElementById('btn-toggle-timer');
+      if (timerRef) {
+        clearInterval(timerRef);
+        timerRef = null;
+        btn.innerText = 'Start';
+        btn.classList.remove('running');
+      } else {
+        btn.innerText = 'Pause';
+        btn.classList.add('running');
+        timerRef = setInterval(() => {
+          if (timerLeft > 0) {
+            timerLeft--;
+            updateDisplay();
+          } else {
+            clearInterval(timerRef);
+            timerRef = null;
+            playBeep();
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            btn.innerText = 'Start';
+            btn.classList.remove('running');
+            timerLeft = timerTotal;
+            updateDisplay();
+          }
+        }, 1000);
+      }
+    }
+
+    renderSchedule();
+  </script>
+</body>
+</html>
